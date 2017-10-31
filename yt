@@ -1,0 +1,191 @@
+#!/bin/bash
+
+#######################################
+# DEPENDENCIES
+# FOLLOWING APPS NEED TO BE INSTALLED:
+#	- pip
+#	- dialog
+#######################################
+
+rollback(){
+#	cd ~/Music/Downloads
+	grep Destination /tmp/temp_ytdl | awk -F": " '{ print $2 }' > /tmp/file.txt
+	if [ -f /tmp/file.txt ]; then
+		fil=$(head -n 1 /tmp/file.txt); lnth=${#fil}; 
+		if [[ $lnth -gt 0 ]]; then
+			fil=${fil:0:lnth-4}; 
+		else
+			dialog --title "Download Error" --msgbox "FILE HASN'T BEEN DOWNLOADED" 6 200
+			clear
+			rm /tmp/temp_ytdl 2>/dev/null
+			rm /tmp/file.txt 2>/dev/null
+			exit 0
+		fi
+	else
+		dialog --title "Download Error" --msgbox "FILE HASN'T BEEN DOWNLOADED" 6 200
+		clear
+		rm /tmp/temp_ytdl 2>/dev/null
+		rm /tmp/file.txt 2>/dev/null
+		exit 0
+	fi
+
+	i=1
+	while IFS= read -a line; do
+		rm ~/Music/Downloads/"$(printf "%s\n" "${line[@]}")" 2>/dev/null
+	  let i++
+	done < "/tmp/file.txt"
+	rm /tmp/temp_ytdl 2>/dev/null
+	rm /tmp/file.txt 2>/dev/null
+	find . -name '*.temp*' -delete
+	dialog --title "Download Error" --msgbox "File \n'${fil^^}' \nhasn't ben downloaded. \n\n Try again using Option 1 (.mp3)" 10 200
+	clear
+}
+
+clearresidue(){
+	cd ~/Music/Downloads
+	grep Destination /tmp/temp_ytdl | awk -F": " '{ print $2 }' > /tmp/file.txt
+
+	i=1
+	for xtension in .webm .mkv; do
+		while IFS= read -a line; do
+		if [ -z "$(printf "%s\n" "${line[@]}" | grep $xtension)" ]; then
+			x=$(printf "%s\n" "${line[@]}" | grep $xtension)
+#			echo "$x does not exist"
+		else
+			x=$(printf "%s\n" "${line[@]}" | grep $xtension)
+#			a="~/Music/Downloads/${x}"
+			rm ~/Music/Downloads/"$(printf "%s\n" "${line[@]}" | grep $xtension)" 2>/dev/null
+		fi
+
+		if [ -z "$(printf "%s\n" "${line[@]}" | grep .mp3)" ]; then
+			x=$(printf "%s\n" "${line[@]}" | grep .mp3)
+#			echo "$x does not exist"
+		else
+			a=$(printf "%s\n" "${line[@]}" | grep .mp3)
+			x=${#a}; z=${a:0:x-4}; z="$z$xtension"
+#			echo $z
+			rm ~/Music/Downloads/"${z}" 2>/dev/null
+		fi
+	  	  let i++
+		done < "/tmp/file.txt"
+	done
+	rm /tmp/temp_ytdl 2>/dev/null
+	rm /tmp/file.txt 2>/dev/null
+}
+
+exitprogram(){
+paplay /usr/share/sounds/freedesktop/stereo/complete.oga
+echo -n "
+
+Process finished. Check messages above.
+Press $(tput bold; tput setaf 6)'q' $(tput sgr0)to quit or any key download another: "
+read answer
+if [ $answer = 'q' ]; then
+  echo "Quitting."
+  exit 0
+else 
+  clear
+  yt
+fi
+}
+
+[[ ! -d "~/Videos/Download" ]] && mkdir -p ~/Videos/Download
+[[ ! -d "~/Music/Downloads" ]] && mkdir -p ~/Music/Downloads
+
+echo -n "Paste the Youtube link here (type 'q' to quit): "
+read name
+#echo "$name"
+if [ $name = 'q' ]
+then
+  echo "Quitting."
+  exit 0
+fi
+
+echo "Please wait a bit... checking for app new version..."
+
+xinstalled=$(pip show youtube-dl | grep Version | awk -F": " '{ print $2 }')
+x1=$(echo $xinstalled | awk -F" " '{ print $2 }')
+#echo "Candidate version" $xinstalled
+xavailable=$(pip search youtube-dl -v | grep 'youtube_dl (' | awk -F" " '{ print $2 }')
+xavailable="${xavailable//)/(}"; xavailable="${xavailable//'('}"
+#echo "Installed version" $xavailable
+if [ $xinstalled != $xavailable ]; then
+    echo "Installed version $(tput setaf 1; tput bold)" $xinstalled; tput sgr0
+    echo "Candidate version $(tput setaf 3; tput bold)" $xavailable; tput sgr0
+    echo
+    tput setaf 1; tput bold
+	echo "Updating... please wait"; tput sgr0
+	sudo pip install --upgrade youtube_dl
+    echo "Finished updating";
+else echo "App is up to date."
+fi
+echo
+tput setaf 3; tput bold
+echo "OPTIONS: $(tput sgr0)
+> 1 - Make $(tput bold; tput setaf 6).mp3 $(tput sgr0)(saving in /Music/Downloads)
+> 2 - Keep the $(tput bold; tput setaf 2)video $(tput sgr0)file but also make $(tput bold; tput setaf 6).mp3 $(tput sgr0)
+> 3 - Make $(tput bold; tput setaf 2)mp4 video $(tput sgr0)file (saving in /Videos)
+> 4 - Download video as is
+> q - QUIT
+
+Choose option (1,2,3 or 4 or even q): "
+read optn
+
+if [[ $optn = 'q' ]]
+then
+  echo "Quitting."
+  exit 0
+fi
+
+err="\n> $(tput setaf 1; tput bold)Download Error. Nothing downloaded. $(tput sgr0)"
+
+if [[ $optn = '1' ]]; then
+cd ~/Music/Downloads
+	if youtube-dl -t -i --extract-audio --audio-format mp3 --audio-quality 0 "$name"; then
+		echo -e "\n> File downloaded in $(tput setaf 3; tput bold)'/Music/Downloads' $(tput sgr0)folder"
+	else
+		echo -e $err
+	fi
+	exitprogram
+fi
+
+if [[ $optn = '2' ]]; then
+cd ~/Music/Downloads
+	if youtube-dl -t -i --extract-audio --audio-format mp3 --audio-quality 0 "$name" > /tmp/temp_ytdl; then
+		if youtube-dl -t -i --merge-output-format mp4 "$name" >> /tmp/temp_ytdl; then
+			clearresidue
+			echo -e "\n> File downloaded in $(tput setaf 3; tput bold)'/Music/Downloads' $(tput sgr0)folder"
+		else	
+			rollback
+			notify-send "Download Error. Nothing downloaded."
+			echo -e $err
+		fi
+	else
+		echo -e $err
+	fi
+	exitprogram
+fi
+
+if [[ $optn = '3' ]]; then
+cd ~/Videos/Download
+	if youtube-dl --recode-video mp4 --prefer-ffmpeg "$name" > /tmp/temp_ytdl; then
+		clearresidue
+		echo -e "\n> File downloaded in $(tput setaf 3; tput bold)'/Videos/Download' $(tput sgr0)folder"
+	else
+		rollback
+		notify-send "Download Error. Nothing downloaded."
+		echo -e $err
+	fi
+	exitprogram
+fi
+
+if [[ $optn = '4' ]]; then
+cd ~/Videos/Download
+	if youtube-dl "$name" > /tmp/temp_ytdl; then
+		echo -e "\n> File downloaded in $(tput setaf 3; tput bold)'/Videos/Download' $(tput sgr0)folder"
+	fi
+	exitprogram
+fi
+
+rm /tmp/temp_ytdl 2>/dev/null
+rm /tmp/file.txt 2>/dev/null
