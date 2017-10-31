@@ -7,8 +7,9 @@
 #	- dialog
 #######################################
 
+
+####### functions #######
 rollback(){
-#	cd ~/Music/Downloads
 	grep Destination /tmp/temp_ytdl | awk -F": " '{ print $2 }' > /tmp/file.txt
 	if [ -f /tmp/file.txt ]; then
 		fil=$(head -n 1 /tmp/file.txt); lnth=${#fil}; 
@@ -50,20 +51,16 @@ clearresidue(){
 		while IFS= read -a line; do
 		if [ -z "$(printf "%s\n" "${line[@]}" | grep $xtension)" ]; then
 			x=$(printf "%s\n" "${line[@]}" | grep $xtension)
-#			echo "$x does not exist"
 		else
 			x=$(printf "%s\n" "${line[@]}" | grep $xtension)
-#			a="~/Music/Downloads/${x}"
 			rm ~/Music/Downloads/"$(printf "%s\n" "${line[@]}" | grep $xtension)" 2>/dev/null
 		fi
 
 		if [ -z "$(printf "%s\n" "${line[@]}" | grep .mp3)" ]; then
 			x=$(printf "%s\n" "${line[@]}" | grep .mp3)
-#			echo "$x does not exist"
 		else
 			a=$(printf "%s\n" "${line[@]}" | grep .mp3)
 			x=${#a}; z=${a:0:x-4}; z="$z$xtension"
-#			echo $z
 			rm ~/Music/Downloads/"${z}" 2>/dev/null
 		fi
 	  	  let i++
@@ -82,33 +79,29 @@ Press $(tput bold; tput setaf 6)'q' $(tput sgr0)to quit or any key download anot
 read answer
 if [ $answer = 'q' ]; then
   echo "Quitting."
+  rm /tmp/temp_ytdl 2>/dev/null
+  rm /tmp/file.txt 2>/dev/null
   exit 0
 else 
   clear
-  yt
+  startDownload
 fi
 }
 
+checkFolders(){
+# checking if directories exist and create them if not
 [[ ! -d "~/Videos/Download" ]] && mkdir -p ~/Videos/Download
 [[ ! -d "~/Music/Downloads" ]] && mkdir -p ~/Music/Downloads
+}
 
-echo -n "Paste the Youtube link here (type 'q' to quit): "
-read name
-#echo "$name"
-if [ $name = 'q' ]
-then
-  echo "Quitting."
-  exit 0
-fi
-
+checkVersion(){
+# checking for new versions of youtube-dl app
 echo "Please wait a bit... checking for app new version..."
 
 xinstalled=$(pip show youtube-dl | grep Version | awk -F": " '{ print $2 }')
 x1=$(echo $xinstalled | awk -F" " '{ print $2 }')
-#echo "Candidate version" $xinstalled
 xavailable=$(pip search youtube-dl -v | grep 'youtube_dl (' | awk -F" " '{ print $2 }')
 xavailable="${xavailable//)/(}"; xavailable="${xavailable//'('}"
-#echo "Installed version" $xavailable
 if [ $xinstalled != $xavailable ]; then
     echo "Installed version $(tput setaf 1; tput bold)" $xinstalled; tput sgr0
     echo "Candidate version $(tput setaf 3; tput bold)" $xavailable; tput sgr0
@@ -119,13 +112,25 @@ if [ $xinstalled != $xavailable ]; then
     echo "Finished updating";
 else echo "App is up to date."
 fi
+}
+
+startDownload(){
+# start downloading
+echo -n "Paste the Youtube link here (type 'q' to quit): "
+read name
+if [ $name = 'q' ]
+then
+  echo "Quitting."
+  exit 0
+fi
+
 echo
 tput setaf 3; tput bold
 echo "OPTIONS: $(tput sgr0)
 > 1 - Make $(tput bold; tput setaf 6).mp3 $(tput sgr0)(saving in /Music/Downloads)
-> 2 - Keep the $(tput bold; tput setaf 2)video $(tput sgr0)file but also make $(tput bold; tput setaf 6).mp3 $(tput sgr0)
-> 3 - Make $(tput bold; tput setaf 2)mp4 video $(tput sgr0)file (saving in /Videos)
-> 4 - Download video as is
+> 2 - Keep the $(tput bold; tput setaf 2)video $(tput sgr0)file but also make $(tput bold; tput setaf 6).mp3 $(tput sgr0)(saving in /Music/Downloads)
+> 3 - Make $(tput bold; tput setaf 2)mp4 video $(tput sgr0)file (saving in /Videos/Download)
+> 4 - Download $(tput bold; tput setaf 2)video as is $(tput sgr0)(saving in /Videos/Download)
 > q - QUIT
 
 Choose option (1,2,3 or 4 or even q): "
@@ -186,6 +191,9 @@ cd ~/Videos/Download
 	fi
 	exitprogram
 fi
+}
 
-rm /tmp/temp_ytdl 2>/dev/null
-rm /tmp/file.txt 2>/dev/null
+####### main script begins here #######
+checkFolders
+checkVersion
+startDownload
