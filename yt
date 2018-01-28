@@ -3,6 +3,7 @@
 #######################################
 # DEPENDENCIES
 # FOLLOWING APPS NEED TO BE INSTALLED:
+#	- youtube-dl
 #	- pip
 #	- dialog
 #######################################
