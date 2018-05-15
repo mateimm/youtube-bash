@@ -103,7 +103,7 @@ echo "Please wait a bit... checking for app new version..."
 
 xinstalled=$(pip show youtube-dl | grep Version | awk -F": " '{ print $2 }')
 x1=$(echo $xinstalled | awk -F" " '{ print $2 }')
-xavailable=$(pip search youtube-dl -v | grep 'youtube_dl (' | awk -F" " '{ print $2 }')
+xavailable=$(pip search youtube_dl -v | grep 'youtube_dl (' | awk -F" " '{ print $2 }')
 xavailable="${xavailable//)/(}"; xavailable="${xavailable//'('}"
 if [ $xinstalled != $xavailable ]; then
     echo "Installed version $(tput setaf 1; tput bold)" $xinstalled; tput sgr0
@@ -111,7 +111,7 @@ if [ $xinstalled != $xavailable ]; then
     echo
     tput setaf 1; tput bold
 	echo "Updating... please wait"; tput sgr0
-	sudo pip install --upgrade youtube_dl
+	sudo pip -H install --upgrade youtube_dl
     echo "Finished updating";
 else echo "App is up to date."
 fi
